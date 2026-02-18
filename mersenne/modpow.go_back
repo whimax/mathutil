@@ -1,0 +1,102 @@
+package mersenne
+
+import "math/big"
+
+/*
+// ModPow returns b^Me % Mm. Run time grows quickly with 'e' and/or 'm' when b
+// != 2 (then ModPow2 is used).
+func ModPow(b, e, m uint32) (r *big.Int) {
+	if m == 1 {
+		return big.NewInt(0)
+	}
+
+	if b == 2 {
+		x := ModPow2(e, m)
+		r = big.NewInt(0)
+		r.SetBit(r, int(x), 1)
+		return
+	}
+
+	bb := big.NewInt(int64(b))
+	r = big.NewInt(1)
+	for ; e != 0; e-- {
+		r = bigfft.Mul(r, bb)
+		Mod(r, r, m)
+		bb = bigfft.Mul(bb, bb)
+		Mod(bb, bb, m)
+	}
+	return
+}
+
+
+*/
+
+// ModPow возвращает b^e % m.
+// Время выполнения растёт с увеличением e и/или m, особенно когда b != 2
+// (в этом случае можно использовать оптимизированную версию ModPow2).
+func ModPow(b, e, m uint32) (r *big.Int) {
+	// Граничные случаи
+	if m == 0 {
+		return nil // деление на ноль не определено
+	}
+	if m == 1 {
+		return big.NewInt(0) // всё ≡ 0 (mod 1)
+	}
+	if e == 0 {
+		return big.NewInt(1) // b^0 = 1
+	}
+	if b == 0 {
+		return big.NewInt(0) // 0^e = 0 при e > 0
+	}
+
+	// Оптимизация: если основание равно 2, используем специализированную функцию
+	if b == 2 {
+		return ModPow2(e, m)
+	}
+
+	// Алгоритм binary exponentiation (square-and-multiply)
+	base := new(big.Int).SetUint64(uint64(b))
+	result := big.NewInt(1)
+	mod := new(big.Int).SetUint64(uint64(m))
+	exp := e
+
+	for exp > 0 {
+		if exp&1 == 1 {
+			result.Mul(result, base)
+			result.Mod(result, mod)
+		}
+		exp >>= 1
+		base.Mul(base, base)
+		base.Mod(base, mod)
+	}
+
+	return result
+}
+
+// ModPow2 — оптимизированная версия для случая b == 2
+// Вычисляет 2^e % m
+func ModPow2(e, m uint32) *big.Int {
+	if m == 1 {
+		return big.NewInt(0)
+	}
+	if e == 0 {
+		return big.NewInt(1)
+	}
+
+	result := big.NewInt(1)
+	base := big.NewInt(2)
+	mod := new(big.Int).SetUint64(uint64(m))
+	exp := e
+
+	for exp > 0 {
+		if exp&1 == 1 {
+			result.Mul(result, base)
+			result.Mod(result, mod)
+		}
+		exp >>= 1
+		base.Mul(base, base)
+		base.Mod(base, mod)
+	}
+
+	return result
+}
